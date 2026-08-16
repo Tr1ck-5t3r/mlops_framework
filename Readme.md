@@ -91,7 +91,7 @@ Local Spark execution on Windows requires `winutils.exe` and `hadoop.dll` to man
 3. The engine automatically injects `HADOOP_HOME` dynamically into the runtime context.
 
 ---
-s
+
 ## 🚀 Execution & UI Inspection
 
 ### 1. Execute Pipeline Run
