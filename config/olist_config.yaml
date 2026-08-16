@@ -1,0 +1,129 @@
+pipeline_name: olist_ecomm_medallion_pipeline
+version: "2.0"
+
+# =====================================================================
+# 1. BRONZE STAGE: Multi-Table Batch Ingestion
+# =====================================================================
+bronze_tables:
+  - name: orders
+    landing_path: "E:/dbx_mlops/data/landing/customers"
+    file_pattern: "olist_orders_dataset.csv"
+    target_delta_path: "E:/dbx_mlops/data/delta/bronze/orders"
+    file_format: "csv"
+    options:
+      header: "true"
+      inferSchema: "true"
+
+  - name: order_items
+    landing_path: "E:/dbx_mlops/data/landing/customers"
+    file_pattern: "olist_order_items_dataset.csv"
+    target_delta_path: "E:/dbx_mlops/data/delta/bronze/order_items"
+    file_format: "csv"
+    options:
+      header: "true"
+      inferSchema: "true"
+
+  - name: customers
+    landing_path: "E:/dbx_mlops/data/landing/customers"
+    file_pattern: "olist_customers_dataset.csv"
+    target_delta_path: "E:/dbx_mlops/data/delta/bronze/customers"
+    file_format: "csv"
+    options:
+      header: "true"
+      inferSchema: "true"
+
+  - name: products
+    landing_path: "E:/dbx_mlops/data/landing/customers"
+    file_pattern: "olist_products_dataset.csv"
+    target_delta_path: "E:/dbx_mlops/data/delta/bronze/products"
+    file_format: "csv"
+    options:
+      header: "true"
+      inferSchema: "true"
+
+  - name: sellers
+    landing_path: "E:/dbx_mlops/data/landing/customers"
+    file_pattern: "olist_sellers_dataset.csv"
+    target_delta_path: "E:/dbx_mlops/data/delta/bronze/sellers"
+    file_format: "csv"
+    options:
+      header: "true"
+      inferSchema: "true"
+
+# =====================================================================
+# 2. SILVER STAGE: Quality Validation & Quarantine Routing
+# =====================================================================
+silver:
+  source_delta_path: "E:/dbx_mlops/data/delta/bronze/orders"
+  target_delta_path: "E:/dbx_mlops/data/delta/silver/orders"
+  quarantine_delta_path: "E:/dbx_mlops/data/delta/quarantine/orders"
+  write_mode: "overwrite"
+  drop_duplicates:
+    - "order_id"
+  validation_rules:
+    - name: valid_order_status
+      expr: "order_status IS NOT NULL AND order_status IN ('delivered', 'shipped', 'invoiced')"
+    - name: valid_timestamps
+      expr: "order_delivered_customer_date IS NULL OR order_delivered_customer_date >= order_purchase_timestamp"
+
+# =====================================================================
+# 3. GOLD STAGE: Relational Feature Store Joins
+# =====================================================================
+gold:
+  primary_table: "E:/dbx_mlops/data/delta/silver/orders"
+  target_delta_path: "E:/dbx_mlops/data/delta/gold/delivery_delay_features"
+  write_mode: "overwrite"
+  
+  joins:
+    - table: "E:/dbx_mlops/data/delta/bronze/order_items"
+      on: ["order_id"]
+      type: "inner"
+    - table: "E:/dbx_mlops/data/delta/bronze/customers"
+      on: ["customer_id"]
+      type: "left"
+    - table: "E:/dbx_mlops/data/delta/bronze/products"
+      on: ["product_id"]
+      type: "left"
+
+  select_expressions:
+    - "order_id"
+    - "customer_id"
+    - "customer_state"
+    - "customer_zip_code_prefix"
+    - "price"
+    - "freight_value"
+    - "product_weight_g"
+    - "order_purchase_timestamp"
+    - "order_estimated_delivery_date"
+    - "order_delivered_customer_date"
+    - "datediff(order_delivered_customer_date, order_estimated_delivery_date) as actual_delay_days"
+
+# =====================================================================
+# 4. ML TRAINING STAGE: PySpark MLlib GBTRegressor
+# =====================================================================
+ml_stage:
+  enabled: true
+  target_column: "actual_delay_days"
+  
+  categorical_features:
+    - "customer_state"
+
+  numeric_features:
+    - "price"
+    - "freight_value"
+    - "product_weight_g"
+
+  train_test_split_ratio: 0.8
+  random_seed: 42
+
+  hyperparameters:
+    maxDepth: 5
+    maxIter: 25
+    stepSize: 0.05
+
+# =====================================================================
+# 4. MLOPS & MLFLOW EXPERIMENT TRACKING
+# =====================================================================
+mlflow:
+  experiment_name: "olist_delivery_delay_prediction"
+  run_name: "local_pyspark_delta_run"

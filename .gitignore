@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+*.key
+secrets.*
+credentials.*
+
+# Databricks / Spark
+.databricks/
+.dbx/
+.spark-dist
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Local generated data / Delta tables
+# Keep source landing data tracked; ignore generated outputs.
+data/delta/
+data/lakehouse/
+data/archive/
+**/_delta_log/
+**/*.crc
+
+# OS / temp
+tmp/
+temp/
+*.log
+
+# Project-specific local artifacts
+artifacts/
+checkpoints/
+cache/

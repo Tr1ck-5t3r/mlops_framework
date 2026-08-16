@@ -1,0 +1,45 @@
+pipeline_name: customer_analytics_pipeline
+version: "1.0"
+
+bronze:
+  landing_path: data/landing/customers
+  archive_path: data/archive/customers
+  file_format: json
+  file_pattern: "*.json"
+  target_delta_path: data/lakehouse/bronze/customers
+  write_mode: append
+
+silver:
+  source_delta_path: data/lakehouse/bronze/customers
+  target_delta_path: data/lakehouse/silver/customers
+  quarantine_delta_path: data/lakehouse/quarantine/customers
+  write_mode: overwrite
+  drop_duplicates:
+    - customer_id
+  validation_rules:
+    - name: valid_customer_id
+      expr: "customer_id IS NOT NULL"
+    - name: valid_age_range
+      expr: "age >= 18 AND age <= 120"
+    - name: valid_status
+      expr: "status IS NOT NULL AND status IN ('ACTIVE', 'PENDING')"
+
+gold:
+  source_delta_path: data/lakehouse/silver/customers
+  target_delta_path: data/lakehouse/gold/customer_summary
+  write_mode: overwrite
+  group_by:
+    - status
+  aggregations:
+    customer_id: count
+
+maintenance:
+  enabled: true
+  retention_hours: 168 # 7 days retention for VACUUM
+  tables:              # If omitted, defaults to Silver and Gold tables
+    - data/lakehouse/silver/customers
+    - data/lakehouse/gold/customer_summary
+
+mlflow:
+  experiment_name: landing_zone_pipeline
+  run_name: maintenance_enabled_run
