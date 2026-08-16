@@ -1,8 +1,4 @@
-Here is the complete **`README.md`** file documenting everything created for the **Declarative Medallion MLOps Engine**, including architecture details, Windows setup steps, and all complete code files.
 
----
-
-```markdown
 # Declarative Medallion MLOps Engine
 
 A lightweight, declarative data pipeline engine built with **PySpark**, **Delta Lake**, **MLflow**, and **Pydantic**. 
